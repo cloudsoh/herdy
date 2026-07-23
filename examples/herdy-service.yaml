@@ -1,0 +1,28 @@
+# Example herdy-service.yaml - place in the root of each service repo
+# This file tells herdy what services are in this repo
+# and how to manage them.
+
+services:
+  - path: my-backend
+    name: my-backend
+    startScript: null
+    buildScript: build
+    dependsOn: []
+
+  - path: my-api
+    name: my-api
+    startScript: start
+    buildScript: build
+    dependsOn: ["my-backend"]
+
+  - path: my-cron
+    name: my-cron
+    startScript: start
+    buildScript: build
+    dependsOn: ["my-backend"]
+
+  - path: my-web
+    name: my-web
+    startScript: "start:local"
+    buildScript: build
+    dependsOn: ["my-backend"]
