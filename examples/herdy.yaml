@@ -1,0 +1,38 @@
+# Example herdy.yaml - place in your workspace root
+# This file defines which repos are in your workspace,
+# how they're grouped, and which tracks exist.
+
+nodeVersion: "18"
+baseBranch: development
+
+repos:
+  # Foundation: built first, before everything else (shared libraries)
+  - name: common-lib
+    url: git@github.com:myorg/common-lib.git
+    group: foundation
+
+  # Common: core services needed by all tracks
+  - name: auth-service
+    url: git@github.com:myorg/auth-service.git
+    group: common
+
+  - name: file-service
+    url: git@github.com:myorg/file-service.git
+    group: common
+
+  # Track: project-specific services, started only when their track is active
+  - name: web-app
+    url: git@github.com:myorg/web-app.git
+    group: track
+    track: web
+
+  - name: mobile-bff
+    url: git@github.com:myorg/mobile-bff.git
+    group: track
+    track: mobile
+
+tracks:
+  - name: web
+    label: Web Frontend
+  - name: mobile
+    label: Mobile BFF
