@@ -1,6 +1,6 @@
 {
   "name": "herdy",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "CLI tool to manage multi-service local development environments",
   "type": "module",
   "bin": {
@@ -40,6 +40,6 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "typescript": "^5.5.0",
-    "vitest": "^1.6.0"
+    "vitest": "^4.1.10"
   }
 }

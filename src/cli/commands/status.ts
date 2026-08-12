@@ -5,6 +5,10 @@ import { scanWorkspace, getServicesForGroup } from '../../core/workspace.js';
 import { SERVICE_TYPES, getServiceType, type ServiceType } from '../../config/service-config.js';
 import * as git from '../../core/git.js';
 
+function truncPad(str: string, width: number): string {
+  return str.length > width ? str.slice(0, width - 1) + '…' : str.padEnd(width);
+}
+
 function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -141,8 +145,8 @@ export const statusCommand = new Command('status')
 
       console.log(
         '  ' +
-        repo.config.name.padEnd(repoCol) +
-        branch.padEnd(branchCol) +
+        truncPad(repo.config.name, repoCol) +
+        truncPad(branch, branchCol) +
         sync +
         dirty +
         builtDisplay +

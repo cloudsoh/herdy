@@ -24,6 +24,7 @@ function appendLog(serviceName: string, data: string) {
 const PORT_REGEX = /port=(\d+)/;
 const VITE_PORT_REGEX = /localhost:(\d+)/;
 const READY_TIMEOUT_MS = 5000;
+const NODEMON_CRASH_REGEX = /\[nodemon\] app crashed/;
 
 interface ManagedService {
   process: Subprocess;
@@ -139,7 +140,11 @@ export async function startService(
     }
     appendLog(serviceName, line);
 
-    if (managed.state.status === 'starting') {
+    if (NODEMON_CRASH_REGEX.test(line)) {
+      clearTimeout(readyTimer);
+      managed.state = setState('error', { error: 'App crashed — run: herdy logs ' + serviceName });
+      onStatusChange?.('error', 'App crashed — run: herdy logs ' + serviceName);
+    } else if (managed.state.status === 'starting') {
       const portMatch = line.match(PORT_REGEX) || line.match(VITE_PORT_REGEX);
       if (portMatch) {
         clearTimeout(readyTimer);
