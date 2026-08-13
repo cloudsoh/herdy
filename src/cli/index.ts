@@ -11,6 +11,7 @@ import { statusCommand } from './commands/status.js';
 import { logsCommand } from './commands/logs.js';
 import { installCommand } from './commands/install.js';
 import { restartCommand } from './commands/restart.js';
+import { configCommand } from './commands/config.js';
 import { stopAllServices } from '../core/service.js';
 
 async function gracefulShutdown() {
@@ -39,5 +40,6 @@ program.addCommand(statusCommand);
 program.addCommand(logsCommand);
 program.addCommand(installCommand);
 program.addCommand(restartCommand);
+program.addCommand(configCommand);
 
 program.parse();
