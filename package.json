@@ -1,6 +1,6 @@
 {
   "name": "herdy",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "CLI tool to manage multi-service local development environments",
   "type": "module",
   "bin": {
