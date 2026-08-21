@@ -14,6 +14,20 @@ export interface RepoInfo {
   services: ServiceConfig[];
 }
 
+export function scanWorkspaceLocal(workspacePath: string): RepoInfo[] {
+  const config = loadWorkspaceConfig();
+  const repos: RepoInfo[] = [];
+
+  for (const repoConfig of config.repos) {
+    const repoPath = resolve(workspacePath, repoConfig.name);
+    const exists = existsSync(repoPath) && existsSync(resolve(repoPath, '.git'));
+    const services = exists ? discoverServices(repoPath, repoConfig.name) : [];
+    repos.push({ config: repoConfig, path: repoPath, exists, services });
+  }
+
+  return repos;
+}
+
 export async function scanWorkspace(workspacePath: string): Promise<RepoInfo[]> {
   const config = loadWorkspaceConfig();
   const repos: RepoInfo[] = [];

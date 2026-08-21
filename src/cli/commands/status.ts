@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { loadWorkspaceConfig } from '../../config/workspace-config.js';
 import { loadState } from '../../config/state.js';
-import { scanWorkspace, getServicesForGroup } from '../../core/workspace.js';
+import { scanWorkspaceLocal } from '../../core/workspace.js';
 import { SERVICE_TYPES, getServiceType, type ServiceType } from '../../config/service-config.js';
 import * as git from '../../core/git.js';
 
@@ -27,7 +28,8 @@ export const statusCommand = new Command('status')
       return;
     }
 
-    const repos = await scanWorkspace(state.workspacePath);
+    const config = loadWorkspaceConfig();
+    const repos = scanWorkspaceLocal(state.workspacePath);
     const persistedServices = state.services || {};
 
     const foundationRepos = repos.filter((r) => r.config.group === 'foundation' && r.exists);
@@ -47,39 +49,42 @@ export const statusCommand = new Command('status')
     }
     const columns = SERVICE_TYPES.filter((t) => usedTypes.has(t));
 
-    // Header
-    console.log('');
-    console.log(
-      chalk.bold('  Herdy') +
-      (state.activeTrack ? chalk.yellow(`    Active Track: ${state.activeTrack}`) : '')
-    );
-    console.log('');
-
     const repoCol = 18;
     const branchCol = 14;
     const syncCol = 16;
     const dirtyCol = 6;
     const builtCol = 6;
     const typeCol = 8;
+    const totalWidth = repoCol + branchCol + syncCol + dirtyCol + builtCol + columns.length * typeCol;
 
-    const header =
+    // Print header immediately — before any git fetches
+    console.log('');
+    console.log(
+      chalk.bold('  Herdy') +
+      (state.activeTrack ? chalk.yellow(`    Active Track: ${state.activeTrack}`) : '')
+    );
+    console.log('');
+    console.log(chalk.gray(
       '  ' +
       'Repo'.padEnd(repoCol) +
       'Branch'.padEnd(branchCol) +
       'Sync'.padEnd(syncCol) +
       'Dirty'.padEnd(dirtyCol) +
       'Built'.padEnd(builtCol) +
-      columns.map((c) => c.padEnd(typeCol)).join('');
-    console.log(chalk.gray(header));
-    console.log(chalk.gray('  ' + '─'.repeat(repoCol + branchCol + syncCol + dirtyCol + builtCol + columns.length * typeCol)));
+      columns.map((c) => c.padEnd(typeCol)).join('')
+    ));
+    console.log(chalk.gray('  ' + '─'.repeat(totalWidth)));
 
     // Render rows
     const errors: { name: string; error: string }[] = [];
 
     async function renderRepo(repo: typeof allRepos[number]) {
-      const branch = repo.gitStatus?.branch || '—';
-      const behind = repo.gitStatus?.behindCount || 0;
-      const fetchFailed = repo.gitStatus?.fetchFailed ?? false;
+      // Fetch git status inline — row prints as soon as this resolves
+      const gitStatus = await git.getStatus(repo.path, config.baseBranch).catch(() => undefined);
+
+      const branch = gitStatus?.branch || '—';
+      const behind = gitStatus?.behindCount || 0;
+      const fetchFailed = gitStatus?.fetchFailed ?? true;
 
       let sync: string;
       if (fetchFailed) {
@@ -90,7 +95,7 @@ export const statusCommand = new Command('status')
         sync = chalk.green('✓ up to date'.padEnd(syncCol));
       }
 
-      const dirty = repo.gitStatus?.isDirty
+      const dirty = gitStatus?.isDirty
         ? chalk.yellow('✎'.padEnd(dirtyCol))
         : chalk.gray('-'.padEnd(dirtyCol));
 
@@ -159,7 +164,7 @@ export const statusCommand = new Command('status')
     }
 
     if (foundationRepos.length > 0 && commonRepos.length > 0) {
-      console.log(chalk.gray('  ' + '┈'.repeat(repoCol + branchCol + syncCol + dirtyCol + builtCol + columns.length * typeCol)));
+      console.log(chalk.gray('  ' + '┈'.repeat(totalWidth)));
     }
 
     for (const repo of commonRepos) {
@@ -167,7 +172,7 @@ export const statusCommand = new Command('status')
     }
 
     if (trackRepos.length > 0) {
-      console.log(chalk.gray('  ' + '┈'.repeat(repoCol + branchCol + syncCol + dirtyCol + builtCol + columns.length * typeCol)));
+      console.log(chalk.gray('  ' + '┈'.repeat(totalWidth)));
       for (const repo of trackRepos) {
         await renderRepo(repo);
       }

@@ -10,6 +10,18 @@ async function git(args: string, cwd: string): Promise<string> {
   return result.stdout.trim();
 }
 
+export interface CommitInfo {
+  hash: string;
+  date: string;
+  subject: string;
+}
+
+export async function getCommitInfo(cwd: string, ref = 'HEAD'): Promise<CommitInfo> {
+  const raw = await git(`log -1 --format=%H|%cd|%s --date=format:%Y-%m-%d ${ref}`, cwd);
+  const [hash, date, ...rest] = raw.split('|');
+  return { hash: hash.slice(0, 7), date, subject: rest.join('|') };
+}
+
 export async function clone(url: string, dest: string): Promise<void> {
   await execaCommand(`git clone ${url} ${dest}`);
 }

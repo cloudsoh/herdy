@@ -27,7 +27,7 @@ export interface ServiceConfig {
   path: string;
   name: string;
   startScript: string | null;
-  buildScript: string;
+  buildScript: string | null;
   devScript: string;
   mode: ServiceMode;
   dependsOn: string[];

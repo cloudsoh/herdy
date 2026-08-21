@@ -71,11 +71,13 @@ export const switchCommand = new Command('switch')
           const servicePath = resolve(repo.path, service.path);
           console.log(chalk.gray(`  Starting ${service.name}...`));
 
-          try {
-            await buildService(servicePath, service.buildScript);
-          } catch (err: any) {
-            console.log(chalk.red(`  ${service.name}: build failed - ${err.message}`));
-            return;
+          if (service.buildScript) {
+            try {
+              await buildService(servicePath, service.buildScript);
+            } catch (err: any) {
+              console.log(chalk.red(`  ${service.name}: build failed - ${err.message}`));
+              return;
+            }
           }
 
           await startService(repo.path, service, repo.config.name, (status, error) => {

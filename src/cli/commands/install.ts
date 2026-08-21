@@ -42,7 +42,7 @@ export const installCommand = new Command('install')
           continue;
         }
 
-        if (opts.build) {
+        if (opts.build && service.buildScript) {
           try {
             process.stdout.write(chalk.gray(`  Building ${service.name}... `));
             await buildService(servicePath, service.buildScript);

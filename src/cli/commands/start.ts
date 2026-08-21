@@ -18,7 +18,7 @@ async function buildAndStartLevel(
       const servicePath = resolve(repo.path, service.path);
       const buildKey = `${repo.config.name}/${service.path}`;
 
-      if (!opts.skipBuild) {
+      if (!opts.skipBuild && service.buildScript) {
         // Check if rebuild is needed
         const currentCommit = await getCurrentCommit(repo.path).catch(() => '');
         const lastBuild = state.builds[buildKey];

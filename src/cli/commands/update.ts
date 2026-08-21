@@ -88,9 +88,19 @@ export const updateCommand = new Command('update')
           console.log(chalk.green('done'));
         }
 
+        const fromInfo = await git.getCommitInfo(repoPath).catch(() => null);
         process.stdout.write(chalk.gray('    Pulling (rebase)... '));
         await git.pullRebase(repoPath);
         console.log(chalk.green('done'));
+        const toInfo = await git.getCommitInfo(repoPath).catch(() => null);
+        if (fromInfo && toInfo) {
+          if (fromInfo.hash === toInfo.hash) {
+            console.log(chalk.gray(`    Already up to date (${toInfo.hash}  ${toInfo.date}  ${toInfo.subject})`));
+          } else {
+            console.log(chalk.gray(`    ${fromInfo.hash}  ${fromInfo.date}  ${fromInfo.subject}`));
+            console.log(chalk.green(`    → ${toInfo.hash}  ${toInfo.date}  ${toInfo.subject}`));
+          }
+        }
 
         if (dirty) {
           const stillHasStash = await git.hasStash(repoPath);
@@ -142,8 +152,7 @@ export const updateCommand = new Command('update')
           continue;
         }
 
-        // Skip build if no build script
-        if (!hasBuildScript(servicePath)) {
+        if (!service.buildScript) {
           console.log(chalk.gray(`    Skipping build for ${service.path} (no build script)`));
           continue;
         }
