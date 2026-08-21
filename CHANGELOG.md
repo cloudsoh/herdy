@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-08-21
+
+### Added
+- `herdy config validate` — checks herdy.yaml for syntax errors and required fields (nodeVersion, baseBranch, repos, tracks) with colored pass/fail output
+- `getCommitInfo()` in git core — fetches commit hash, date, and subject for any ref
+- `scanWorkspaceLocal()` in workspace core — scans repos without requiring a fully initialised workspace
+- `resolveConfigPath()` exported from workspace-config for external use
+- `preversion` npm hook that auto-generates CHANGELOG entries via Claude before each release
+
+### Changed
+- YAML parse errors now include line/column position and actionable hints (colon-in-value, tab indentation, duplicate key)
+- `status` columns adjusted for better truncation and readability
+- `switch`, `update`, `install`, `start` commands pick up workspace-config improvements
+
 ## [0.1.1] - 2026-07-25
 
 ### Changed
