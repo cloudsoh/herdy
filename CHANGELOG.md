@@ -16,6 +16,27 @@ All notable changes to this project will be documented in this file.
 - `status` columns adjusted for better truncation and readability
 - `switch`, `update`, `install`, `start` commands pick up workspace-config improvements
 
+## [0.2.0] - 2026-08-13
+
+### Added
+- `herdy config` — read and update workspace configuration keys from herdy.yaml via the CLI
+- `herdy config set <key> <value>` — update a settable config key in-place
+- `herdy config list` — display all current configuration values
+
+## [0.1.3] - 2026-08-12
+
+### Added
+- examples/herdy.yaml for quick reference
+
+### Fixed
+- `herdy start` now detects `[nodemon] app crashed` in stdout and surfaces it as an error
+- Status table repo/branch columns truncated to prevent layout overflow
+- nanoid < 3.3.17 high-severity vulnerability patched
+
+### Changed
+- Upgrade vitest ^1.6.0 → ^4.1.10 to resolve esbuild/vite vulnerability chain
+- Exclude `.claude/` from vitest test discovery
+
 ## [0.1.1] - 2026-07-25
 
 ### Changed
