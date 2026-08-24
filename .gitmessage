@@ -1,0 +1,13 @@
+# type(scope): short description (72 chars max, no period)
+#
+# Types: feat | fix | chore | docs | refactor | test | perf | ci
+# Scope: optional, e.g. status | config | logs | cli | core
+#
+# Examples:
+#   feat(status): auto-detect service type from name suffix
+#   fix(config): show line number in YAML parse errors
+#   chore: bump version to 0.4.0
+#
+# Body (optional — explain WHY, not what):
+#
+# BREAKING CHANGE: describe what breaks and migration path
