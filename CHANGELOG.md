@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-08-24
+
+### Added
+- Optional `serviceType` field on `ServiceConfig` — set it in `herdy-service.yaml` to override the name-derived type
+
+### Changed
+- `herdy status` columns are now derived dynamically from actual service names in the workspace instead of being filtered from a fixed `SERVICE_TYPES` list; any suffix after the last `-` becomes a column, sorted alphabetically
+- `deriveServiceType()` replaces `getServiceType()` — respects explicit `serviceType` when set, otherwise falls back to the last dash-segment of the service name
+
 ## [0.3.0] - 2026-08-21
 
 ### Added
