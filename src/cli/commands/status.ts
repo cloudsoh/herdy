@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { loadWorkspaceConfig } from '../../config/workspace-config.js';
 import { loadState } from '../../config/state.js';
 import { scanWorkspaceLocal } from '../../core/workspace.js';
-import { SERVICE_TYPES, getServiceType, type ServiceType } from '../../config/service-config.js';
+import { deriveServiceType } from '../../config/service-config.js';
 import * as git from '../../core/git.js';
 
 function truncPad(str: string, width: number): string {
@@ -38,16 +38,15 @@ export const statusCommand = new Command('status')
 
     const allRepos = [...foundationRepos, ...commonRepos, ...trackRepos];
 
-    // Determine which service type columns are needed
-    const usedTypes = new Set<ServiceType>();
+    // Derive columns from the actual service names present in the workspace
+    const usedTypes = new Set<string>();
     for (const repo of allRepos) {
       for (const service of repo.services) {
         if (!service.startScript) continue;
-        const type = getServiceType(service.name);
-        if (type) usedTypes.add(type);
+        usedTypes.add(deriveServiceType(service));
       }
     }
-    const columns = SERVICE_TYPES.filter((t) => usedTypes.has(t));
+    const columns = [...usedTypes].sort();
 
     const repoCol = 18;
     const branchCol = 14;
@@ -123,7 +122,7 @@ export const statusCommand = new Command('status')
       }
 
       const serviceStatuses = columns.map((type) => {
-        const service = repo.services.find((s) => s.startScript && getServiceType(s.name) === type);
+        const service = repo.services.find((s) => s.startScript && deriveServiceType(s) === type);
         if (!service) return chalk.gray('-'.padEnd(typeCol));
 
         // Read persisted service state

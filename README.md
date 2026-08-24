@@ -58,8 +58,8 @@ herdy start my-track
 herdy status
 
 # Update a specific repo and restart it
-herdy update auth-service
-herdy restart auth-service
+herdy update order-service
+herdy restart order-service
 
 # Update all common repos to base branch
 herdy update --base
@@ -72,7 +72,7 @@ herdy switch mobile
 herdy logs --all
 
 # Tail a single service
-herdy logs auth-api -f
+herdy logs order-api -f
 ```
 
 ## Status Output
@@ -80,15 +80,14 @@ herdy logs auth-api -f
 ```
   Herdy    Active Track: web
 
-  Repo              Branch        Sync            Dirty Built api     web     cron    mq      ws
-  ──────────────────────────────────────────────────────────────────────────────────────────────
-  common-lib        development   ✓ up to date    -     ✓     -       -       -       -       -
-  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-  auth-service      development   ↓ 3 behind      -     ✓     up      up      up      -       -
-  file-service      development   ✓ up to date    -     ✓     up      -       -       -       -
-  messaging         development   ✓ up to date    -     ✓     up      -       -       up      -
-  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-  web-app           feature/xyz   ✓ up to date    ✎     ✓     up      up      up      up      up
+  Repo              Branch        Sync            Dirty Built api     web     worker
+  ────────────────────────────────────────────────────────────────────────────────
+  shared-ui         main          ✓ up to date    -     ✓     -       -       -
+  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  product-service   main          ✓ up to date    -     ✓     up      -       -
+  order-service     main          ↓ 2 behind      -     ✓     up      -       up
+  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  storefront        feature/cart  ✓ up to date    ✎     ✓     up      up      -
 
   up=running  off=stopped  err=error  build=building  -=N/A
 ```
@@ -97,7 +96,7 @@ herdy logs auth-api -f
 - **Sync** — commits behind base branch (`? offline` if fetch failed)
 - **Dirty** — `✎` = uncommitted changes, `-` = clean
 - **Built** — `✓` = built at current commit, `✗` = not built, `~` = partially built
-- **Service types** — detected from name suffix (`-api`, `-web`, `-cron`, `-mq`, `-ws`)
+- **Service columns** — auto-detected from the last segment of each service name (`order-api` → `api`, `order-worker` → `worker`). Override with `serviceType` in `herdy-service.yaml`.
 
 ## Configuration
 
@@ -106,26 +105,35 @@ herdy logs auth-api -f
 Place in your workspace root. Defines repos, tracks, and shared settings.
 
 ```yaml
-nodeVersion: "18"
-baseBranch: development
+nodeVersion: "20"
+baseBranch: main
 
 repos:
-  - name: common-lib
-    url: git@github.com:myorg/common-lib.git
+  - name: shared-ui
+    url: git@github.com:myorg/shared-ui.git
     group: foundation
 
-  - name: auth-service
-    url: git@github.com:myorg/auth-service.git
+  - name: product-service
+    url: git@github.com:myorg/product-service.git
     group: common
 
-  - name: web-app
-    url: git@github.com:myorg/web-app.git
+  - name: order-service
+    url: git@github.com:myorg/order-service.git
+    group: common
+
+  - name: storefront
+    url: git@github.com:myorg/storefront.git
     group: track
     track: web
 
+  - name: mobile-bff
+    url: git@github.com:myorg/mobile-bff.git
+    group: track
+    track: mobile
+
 tracks:
   - name: web
-    label: Web Frontend
+    label: Web Storefront
   - name: mobile
     label: Mobile BFF
 ```
@@ -141,26 +149,28 @@ Place in the root of each service repo. Defines sub-services and their relations
 
 ```yaml
 services:
-  - path: my-common
-    name: my-common
+  - path: order-core
+    name: order-core
     startScript: null
     dependsOn: []
 
-  - path: my-backend
-    name: my-backend
-    startScript: null
-    dependsOn: ["my-common"]
-
-  - path: my-api
-    name: my-api
+  - path: order-api
+    name: order-api
     mode: dev
-    devScript: "start:local:nodemon"
-    dependsOn: ["my-backend"]
+    devScript: "start:dev"
+    dependsOn: ["order-core"]
 
-  - path: my-web
-    name: my-web
-    startScript: "start:local"
-    dependsOn: ["my-backend"]
+  - path: order-worker
+    name: order-worker
+    startScript: "start"
+    dependsOn: ["order-core"]
+
+  # Optional: explicit service type override
+  - path: order-ws
+    name: order-notifications
+    serviceType: realtime
+    startScript: "start"
+    dependsOn: ["order-core"]
 ```
 
 Without this config, herdy auto-discovers subdirectories with `package.json`.
@@ -170,12 +180,13 @@ Without this config, herdy auto-discovers subdirectories with `package.json`.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `path` | (required) | Subdirectory within the repo |
-| `name` | (required) | Display name (suffix determines type: `-api`, `-web`, `-cron`, `-mq`, `-ws`) |
+| `name` | (required) | Display name. The last `-`-separated segment is used as the service type column in `herdy status` (e.g. `order-api` → `api`). |
 | `startScript` | `start` | npm script to run. Set to `null` for build-only libraries. |
 | `buildScript` | `build` | npm script to build |
 | `devScript` | `start:dev` | npm script for dev mode (hot reload) |
 | `mode` | `prod` | `prod` uses startScript, `dev` uses devScript |
 | `dependsOn` | `[]` | Service names that must build before this one |
+| `serviceType` | _(from name)_ | Override the service type column shown in `herdy status` |
 
 ## How It Works
 

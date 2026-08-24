@@ -33,16 +33,10 @@ export function loadRepoServiceConfig(repoPath: string): RepoServiceConfig | nul
   return { services };
 }
 
-export const SERVICE_TYPES = ['api', 'web', 'cron', 'mq', 'ws'] as const;
-export type ServiceType = typeof SERVICE_TYPES[number];
-
-export function getServiceType(serviceName: string): ServiceType | null {
-  for (const type of SERVICE_TYPES) {
-    if (serviceName.endsWith(`-${type}`) || serviceName === type) {
-      return type;
-    }
-  }
-  return null;
+export function deriveServiceType(service: ServiceConfig): string {
+  if (service.serviceType) return service.serviceType;
+  const lastDash = service.name.lastIndexOf('-');
+  return lastDash !== -1 ? service.name.slice(lastDash + 1) : service.name;
 }
 
 export function discoverServices(repoPath: string, repoName: string): ServiceConfig[] {

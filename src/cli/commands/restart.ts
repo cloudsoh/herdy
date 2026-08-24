@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { loadState } from '../../config/state.js';
 import { scanWorkspace, getServicesForGroup, topologicalSort, type RepoInfo } from '../../core/workspace.js';
 import { stopService, startService, buildService, getManagedServices } from '../../core/service.js';
-import { getServiceType } from '../../config/service-config.js';
 import type { ServiceConfig } from '../../types.js';
 
 const GROUPS = ['foundation', 'common', 'track'] as const;

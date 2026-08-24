@@ -31,6 +31,7 @@ export interface ServiceConfig {
   devScript: string;
   mode: ServiceMode;
   dependsOn: string[];
+  serviceType?: string;
 }
 
 export interface RepoServiceConfig {
