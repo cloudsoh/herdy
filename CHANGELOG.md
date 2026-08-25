@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2] - 2026-08-25
+
+### Changed
+- Improved command help text and test fixtures
+
 ## [0.5.1] - 2026-08-25
 
 ### Added
