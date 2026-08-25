@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2026-08-25
+
+### Added
+- Per-repo `remote` field on `RepoConfig` — overrides the workspace-level `remote` for that repo only
+
 ## [0.5.0] - 2026-08-25
 
 ### Added

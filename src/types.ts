@@ -15,6 +15,7 @@ export interface RepoConfig {
   url: string;
   group: RepoGroup;
   track?: string;
+  remote?: string;
 }
 
 export interface TrackConfig {

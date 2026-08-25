@@ -53,7 +53,7 @@ export const updateCommand = new Command('update')
       // Fetch and update
       try {
         process.stdout.write(chalk.gray('    Fetching... '));
-        await git.fetch(repoPath, config.remote ?? 'origin');
+        await git.fetch(repoPath, repo.config.remote ?? config.remote ?? 'origin');
         console.log(chalk.green('done'));
 
         const currentBranch = await git.getCurrentBranch(repoPath);
