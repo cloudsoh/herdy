@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 
 export const switchCommand = new Command('switch')
   .description('Switch active track')
-  .argument('<track>', 'Track to switch to (fms, mps, sample)')
+  .argument('<track>', 'Track name to switch to (must match a track defined in herdy.yaml)')
   .option('--no-prompt', 'Skip confirmation prompt')
   .action(async (track, opts) => {
     const config = loadWorkspaceConfig();

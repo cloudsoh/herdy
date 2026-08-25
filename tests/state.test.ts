@@ -44,7 +44,7 @@ describe('state management', () => {
   it('migrates old single-workspace format', () => {
     const oldFormat = {
       workspacePath: '/old/path',
-      activeTrack: 'fms',
+      activeTrack: 'myapp',
       initProgress: {},
       services: {},
       lastUpdated: '2024-01-01',
@@ -58,7 +58,7 @@ describe('state management', () => {
         workspaces: { [parsed.workspacePath]: parsed },
         lastUsed: parsed.workspacePath,
       };
-      expect(migrated.workspaces['/old/path'].activeTrack).toBe('fms');
+      expect(migrated.workspaces['/old/path'].activeTrack).toBe('myapp');
       expect(migrated.lastUsed).toBe('/old/path');
     }
   });
