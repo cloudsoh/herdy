@@ -5,6 +5,7 @@ export type RepoGroup = 'foundation' | 'common' | 'track';
 export interface WorkspaceConfig {
   nodeVersion: string;
   baseBranch: string;
+  remote?: string;
   repos: RepoConfig[];
   tracks: TrackConfig[];
 }

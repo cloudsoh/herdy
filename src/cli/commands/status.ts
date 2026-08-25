@@ -79,7 +79,7 @@ export const statusCommand = new Command('status')
 
     async function renderRepo(repo: typeof allRepos[number]) {
       // Fetch git status inline — row prints as soon as this resolves
-      const gitStatus = await git.getStatus(repo.path, config.baseBranch).catch(() => undefined);
+      const gitStatus = await git.getStatus(repo.path, config.baseBranch, config.remote ?? 'origin').catch(() => undefined);
 
       const branch = gitStatus?.branch || '—';
       const behind = gitStatus?.behindCount || 0;

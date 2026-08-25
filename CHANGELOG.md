@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-08-25
+
+### Added
+- `remote` field on `WorkspaceConfig` — set `remote: <name>` in `herdy.yaml` to use a remote other than `origin`; defaults to `origin` when not specified
+- All git operations (fetch, status ahead/behind, reset) now respect the configured remote
+
 ## [0.4.0] - 2026-08-24
 
 ### Added

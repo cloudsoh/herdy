@@ -26,8 +26,8 @@ export async function clone(url: string, dest: string): Promise<void> {
   await execaCommand(`git clone ${url} ${dest}`);
 }
 
-export async function fetch(cwd: string): Promise<void> {
-  await git('fetch origin', cwd);
+export async function fetch(cwd: string, remote = 'origin'): Promise<void> {
+  await git(`fetch ${remote}`, cwd);
 }
 
 export async function getCurrentBranch(cwd: string): Promise<string> {
@@ -46,17 +46,17 @@ export async function pull(cwd: string): Promise<void> {
   await git('pull', cwd);
 }
 
-export async function getStatus(cwd: string, remoteBranch: string): Promise<GitStatus> {
+export async function getStatus(cwd: string, remoteBranch: string, remote = 'origin'): Promise<GitStatus> {
   let fetchFailed = false;
   try {
-    await fetch(cwd);
+    await fetch(cwd, remote);
   } catch {
     fetchFailed = true;
   }
 
   const branch = await getCurrentBranch(cwd);
-  const behindOutput = await git(`rev-list --count HEAD..origin/${remoteBranch}`, cwd).catch(() => '0');
-  const aheadOutput = await git(`rev-list --count origin/${remoteBranch}..HEAD`, cwd).catch(() => '0');
+  const behindOutput = await git(`rev-list --count HEAD..${remote}/${remoteBranch}`, cwd).catch(() => '0');
+  const aheadOutput = await git(`rev-list --count ${remote}/${remoteBranch}..HEAD`, cwd).catch(() => '0');
   const dirtyOutput = await git('status --porcelain', cwd);
 
   return {
@@ -101,7 +101,7 @@ export async function isDirty(cwd: string): Promise<boolean> {
   return output.length > 0;
 }
 
-export async function resetToRemote(branch: string, cwd: string): Promise<void> {
+export async function resetToRemote(branch: string, cwd: string, remote = 'origin'): Promise<void> {
   await git(`checkout ${branch}`, cwd);
-  await git(`reset --hard origin/${branch}`, cwd);
+  await git(`reset --hard ${remote}/${branch}`, cwd);
 }
