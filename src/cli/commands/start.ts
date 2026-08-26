@@ -2,9 +2,18 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { loadState, saveState } from '../../config/state.js';
 import { scanWorkspace, getServicesForGroup, topologicalSort } from '../../core/workspace.js';
-import { startService, buildService } from '../../core/service.js';
+import { startService, buildService, stopAllServices, getManagedServices } from '../../core/service.js';
 import { getCurrentCommit } from '../../core/git.js';
 import { resolve } from 'node:path';
+
+async function shutdown(reason?: string): Promise<void> {
+  const running = Array.from(getManagedServices().keys());
+  if (running.length === 0) return;
+  if (reason) console.log(chalk.yellow(`\n${reason}`));
+  console.log(chalk.yellow(`Stopping ${running.length} service(s)...`));
+  await stopAllServices();
+  console.log(chalk.gray('All services stopped.'));
+}
 
 async function buildAndStartLevel(
   level: { repo: any; service: any }[],
@@ -79,6 +88,15 @@ export const startCommand = new Command('start')
       return;
     }
 
+    process.once('SIGINT', async () => {
+      await shutdown();
+      process.exit(0);
+    });
+    process.once('SIGTERM', async () => {
+      await shutdown();
+      process.exit(0);
+    });
+
     const repos = await scanWorkspace(state.workspacePath);
 
     if (targets.length > 0) {
@@ -94,7 +112,8 @@ export const startCommand = new Command('start')
             const ok = await buildAndStartLevel(level, opts);
             if (!ok) {
               console.log(chalk.red(`\nAborted: ${target} build failed.`));
-              break;
+              await shutdown('Stopping services started before the failure...');
+              return;
             }
           }
           continue;
@@ -110,7 +129,8 @@ export const startCommand = new Command('start')
             const ok = await buildAndStartLevel(level, opts);
             if (!ok) {
               console.log(chalk.red(`\nAborted: ${target} build failed.`));
-              break;
+              await shutdown('Stopping services started before the failure...');
+              return;
             }
           }
           continue;
@@ -132,6 +152,7 @@ export const startCommand = new Command('start')
           const ok = await buildAndStartLevel(level, opts);
           if (!ok) {
             console.log(chalk.red('\nAborted: foundation build failed.'));
+            await shutdown('Stopping services started before the failure...');
             return;
           }
         }
@@ -145,6 +166,7 @@ export const startCommand = new Command('start')
         const ok = await buildAndStartLevel(level, opts);
         if (!ok) {
           console.log(chalk.red('\nAborted: common service build failed.'));
+          await shutdown('Stopping services started before the failure...');
           return;
         }
       }
@@ -158,6 +180,7 @@ export const startCommand = new Command('start')
           const ok = await buildAndStartLevel(level, opts);
           if (!ok) {
             console.log(chalk.red('\nAborted: track service build failed.'));
+            await shutdown('Stopping services started before the failure...');
             return;
           }
         }
