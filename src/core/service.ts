@@ -91,6 +91,9 @@ export async function startService(
   const serviceName = config.name;
   const fullPath = resolve(servicePath, config.path);
 
+  let resolveReady: (state: ServiceState) => void;
+  const ready = new Promise<ServiceState>((resolve) => { resolveReady = resolve; });
+
   const setState = (status: ServiceStatus, extra?: Partial<ServiceState>) => {
     const state: ServiceState = {
       name: serviceName,
@@ -101,6 +104,7 @@ export async function startService(
     };
     updateServiceState(serviceName, state);
     onStatusChange?.(status, extra?.error);
+    if (status === 'running' || status === 'error') resolveReady!(state);
     return state;
   };
 
@@ -143,7 +147,6 @@ export async function startService(
     if (NODEMON_CRASH_REGEX.test(line)) {
       clearTimeout(readyTimer);
       managed.state = setState('error', { error: 'App crashed — run: herdy logs ' + serviceName });
-      onStatusChange?.('error', 'App crashed — run: herdy logs ' + serviceName);
     } else if (managed.state.status === 'starting') {
       const portMatch = line.match(PORT_REGEX) || line.match(VITE_PORT_REGEX);
       if (portMatch) {
@@ -174,7 +177,7 @@ export async function startService(
     managedServices.delete(serviceName);
   });
 
-  return managed.state;
+  return ready;
 }
 
 export async function stopService(serviceName: string): Promise<void> {

@@ -79,27 +79,31 @@ export function saveState(state: WorkspaceState): void {
   saveGlobalState(global);
 }
 
+// Serializes concurrent updateServiceState calls so concurrent service startups
+// don't overwrite each other's state in the read-modify-write cycle.
+let writeQueue: Promise<void> = Promise.resolve();
+
 export function updateServiceState(
   serviceName: string,
   update: Partial<WorkspaceState['services'][string]>
 ): void {
-  // Read-modify-write directly on global state to avoid race conditions
-  // between multiple services updating concurrently
-  const workspacePath = resolveWorkspacePath();
-  if (!workspacePath) return;
+  writeQueue = writeQueue.then(() => {
+    const workspacePath = resolveWorkspacePath();
+    if (!workspacePath) return;
 
-  const global = loadGlobalState();
-  if (!global.workspaces[workspacePath]) {
-    global.workspaces[workspacePath] = { ...DEFAULT_WORKSPACE_STATE, workspacePath };
-  }
-  const ws = global.workspaces[workspacePath];
-  if (!ws.services) ws.services = {};
-  ws.services[serviceName] = {
-    ...ws.services[serviceName],
-    ...update,
-  } as WorkspaceState['services'][string];
-  ws.lastUpdated = new Date().toISOString();
-  saveGlobalState(global);
+    const global = loadGlobalState();
+    if (!global.workspaces[workspacePath]) {
+      global.workspaces[workspacePath] = { ...DEFAULT_WORKSPACE_STATE, workspacePath };
+    }
+    const ws = global.workspaces[workspacePath];
+    if (!ws.services) ws.services = {};
+    ws.services[serviceName] = {
+      ...ws.services[serviceName],
+      ...update,
+    } as WorkspaceState['services'][string];
+    ws.lastUpdated = new Date().toISOString();
+    saveGlobalState(global);
+  }).catch(() => {});
 }
 
 export function listWorkspaces(): { path: string; lastUpdated: string }[] {

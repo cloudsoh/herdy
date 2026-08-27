@@ -58,7 +58,7 @@ async function buildAndStartLevel(
       }
 
       console.log(chalk.gray(`  Starting ${service.name}...`));
-      await startService(repo.path, service, repo.config.name, (status, error) => {
+      const result = await startService(repo.path, service, repo.config.name, (status, error) => {
         if (status === 'running') {
           console.log(chalk.green(`  ${service.name}: running`));
         } else if (status === 'error') {
@@ -66,8 +66,7 @@ async function buildAndStartLevel(
         }
       });
 
-      // Give the process a moment to fail fast (e.g. missing env, port conflict)
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (result.status === 'error') return false;
       return true;
     })
   );
