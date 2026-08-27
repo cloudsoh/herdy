@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3] - 2026-08-27
+
+### Fixed
+- `herdy status` showing `start` instead of `up` for running services — `startService` now resolves only after the service confirms `running` (via port detection or 5s timeout), so status is accurate immediately after `herdy start` completes
+- Concurrent service startups silently overwriting each other's state — `updateServiceState` writes are now serialized through a queue, preventing race conditions when multiple services transition to `running` simultaneously
+- Services started before a build failure were left orphaned — every abort path now calls `shutdown()` to stop all managed services
+
+### Changed
+- `herdy start` waits for each service to reach `running` or `error` before proceeding to the next level, replacing the fixed 1.5s delay
+- A service that errors during startup now correctly triggers the abort and shutdown flow
+
 ## [0.5.2] - 2026-08-25
 
 ### Changed
