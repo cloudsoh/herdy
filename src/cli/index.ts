@@ -2,6 +2,9 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { homedir } from 'node:os';
 import { initCommand } from './commands/init.js';
 import { linkCommand } from './commands/link.js';
 import { startCommand } from './commands/start.js';
@@ -24,14 +27,33 @@ async function gracefulShutdown() {
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 
+const ERROR_LOG = resolve(homedir(), '.herdy', 'error.log');
+
+function logError(err: unknown): void {
+  const timestamp = new Date().toISOString();
+  const entry = err instanceof Error
+    ? `[${timestamp}] ${err.stack ?? err.message}`
+    : `[${timestamp}] ${String(err)}`;
+  try {
+    mkdirSync(resolve(homedir(), '.herdy'), { recursive: true });
+    appendFileSync(ERROR_LOG, entry + '\n\n');
+  } catch {
+    // best-effort — don't crash trying to log a crash
+  }
+}
+
 process.on('uncaughtException', (err) => {
+  logError(err);
   console.error(chalk.red(`\nError: ${err.message}`));
+  console.error(chalk.gray(`  Full trace logged to ${ERROR_LOG}`));
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
+  logError(reason);
   const message = reason instanceof Error ? reason.message : String(reason);
   console.error(chalk.red(`\nError: ${message}`));
+  console.error(chalk.gray(`  Full trace logged to ${ERROR_LOG}`));
   process.exit(1);
 });
 
