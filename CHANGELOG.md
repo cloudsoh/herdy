@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4] - 2026-08-28
+
+### Fixed
+- `herdy status` sync column showing inflated behind count for repos on a feature branch — the comparison now uses `origin/<currentBranch>` instead of always `origin/<baseBranch>`, so a repo that is up to date on its own branch correctly shows `✓ up to date`
+- git operations inside a pre-commit hook (e.g. the test suite) operating on the wrong repository — `GIT_DIR`, `GIT_INDEX_FILE`, and `GIT_WORK_TREE` are now stripped from the environment passed to all internal `execa` git calls so each call uses the intended `cwd`
+
 ## [0.5.3] - 2026-08-27
 
 ### Fixed
