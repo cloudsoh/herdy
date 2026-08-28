@@ -20,6 +20,11 @@ export const switchCommand = new Command('switch')
       return;
     }
 
+    if (!config?.tracks?.length) {
+      console.log(chalk.red('No tracks defined in herdy.yaml. Add a `tracks:` section first.'));
+      return;
+    }
+
     const validTracks = config.tracks.map((t) => t.name);
     if (!validTracks.includes(track)) {
       console.log(chalk.red(`Invalid track: ${track}. Available: ${validTracks.join(', ')}`));

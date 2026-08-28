@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { initCommand } from './commands/init.js';
 import { linkCommand } from './commands/link.js';
 import { startCommand } from './commands/start.js';
@@ -22,6 +23,17 @@ async function gracefulShutdown() {
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
+
+process.on('uncaughtException', (err) => {
+  console.error(chalk.red(`\nError: ${err.message}`));
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  console.error(chalk.red(`\nError: ${message}`));
+  process.exit(1);
+});
 
 const program = new Command();
 
