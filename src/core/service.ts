@@ -1,10 +1,12 @@
 import { execa, type Subprocess } from 'execa';
+import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
-import { existsSync, copyFileSync, mkdirSync, appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, copyFileSync, mkdirSync, appendFileSync, readFileSync, writeFileSync, openSync, closeSync } from 'node:fs';
 import { homedir } from 'node:os';
 import treeKill from 'tree-kill';
 import type { ServiceConfig, ServiceState, ServiceStatus } from '../types.js';
 import { updateServiceState } from '../config/state.js';
+import { writePid, deletePid } from './pid.js';
 
 const LOG_DIR = resolve(homedir(), '.herdy', 'logs');
 
@@ -120,6 +122,10 @@ export async function startService(
     reject: false,
   });
 
+  if (child.pid) {
+    writePid(serviceName, child.pid);
+  }
+
   const managed: ManagedService = {
     process: child,
     config,
@@ -168,6 +174,7 @@ export async function startService(
 
   child.on('exit', (code) => {
     clearTimeout(readyTimer);
+    deletePid(serviceName);
     if (managed.state.status !== 'stopped') {
       const lastLines = managed.logBuffer.slice(-10).join('').trim();
       const errorMsg = `Exited with code ${code}`;
@@ -196,6 +203,7 @@ export async function stopService(serviceName: string): Promise<void> {
     });
   }
 
+  deletePid(serviceName);
   managedServices.delete(serviceName);
 }
 
@@ -206,4 +214,33 @@ export async function stopAllServices(): Promise<void> {
 
 export function isServiceRunning(serviceName: string): boolean {
   return managedServices.has(serviceName);
+}
+
+export function startServiceDetached(
+  repoPath: string,
+  config: ServiceConfig,
+  repoName: string,
+): number | null {
+  const script = config.mode === 'dev' ? config.devScript : config.startScript;
+  if (!script) return null;
+
+  const fullPath = resolve(repoPath, config.path);
+  ensureLogDir();
+  appendFileSync(getLogPath(config.name), `\n--- [herdy] Service starting (detached) at ${new Date().toISOString()} ---\n`);
+
+  const fd = openSync(getLogPath(config.name), 'a');
+  const child = spawn('npm', ['run', script], {
+    cwd: fullPath,
+    detached: true,
+    stdio: ['ignore', fd, fd],
+    env: { ...process.env, FORCE_COLOR: '1' },
+  });
+  closeSync(fd);
+  child.unref();
+
+  if (child.pid) {
+    writePid(config.name, child.pid);
+    return child.pid;
+  }
+  return null;
 }

@@ -51,9 +51,9 @@ describe('CLI commands', () => {
     expect(output).toContain('No workspace linked');
   });
 
-  it('stop works with no services running', () => {
+  it('stop requires an argument', () => {
     const output = run('stop');
-    expect(output).toContain('No services running');
+    expect(output).toContain('Specify a target or --all');
   });
 
   it('logs without args shows help', () => {

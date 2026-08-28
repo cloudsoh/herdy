@@ -4,19 +4,11 @@ import { loadWorkspaceConfig } from '../../config/workspace-config.js';
 import { loadState } from '../../config/state.js';
 import { scanWorkspaceLocal } from '../../core/workspace.js';
 import { deriveServiceType } from '../../config/service-config.js';
+import { isServiceAlive } from '../../core/pid.js';
 import * as git from '../../core/git.js';
 
 function truncPad(str: string, width: number): string {
   return str.length > width ? str.slice(0, width - 1) + '…' : str.padEnd(width);
-}
-
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export const statusCommand = new Command('status')
@@ -30,7 +22,6 @@ export const statusCommand = new Command('status')
 
     const config = loadWorkspaceConfig();
     const repos = scanWorkspaceLocal(state.workspacePath);
-    const persistedServices = state.services || {};
 
     const foundationRepos = repos.filter((r) => r.config.group === 'foundation' && r.exists);
     const commonRepos = repos.filter((r) => r.config.group === 'common' && r.exists);
@@ -73,9 +64,6 @@ export const statusCommand = new Command('status')
       columns.map((c) => c.padEnd(typeCol)).join('')
     ));
     console.log(chalk.gray('  ' + '─'.repeat(totalWidth)));
-
-    // Render rows
-    const errors: { name: string; error: string }[] = [];
 
     async function renderRepo(repo: typeof allRepos[number]) {
       // Fetch git status inline — row prints as soon as this resolves
@@ -125,24 +113,8 @@ export const statusCommand = new Command('status')
         const service = repo.services.find((s) => s.startScript && deriveServiceType(s) === type);
         if (!service) return chalk.gray('-'.padEnd(typeCol));
 
-        // Read persisted service state
-        const persisted = persistedServices[service.name];
-        if (persisted) {
-          const st = persisted.status;
-          // Verify PID is actually alive for "running" services
-          if (st === 'running' && persisted.pid) {
-            if (isPidAlive(persisted.pid)) {
-              return chalk.green('up'.padEnd(typeCol));
-            }
-            return chalk.red('dead'.padEnd(typeCol));
-          }
-          if (st === 'running') return chalk.green('up'.padEnd(typeCol));
-          if (st === 'starting') return chalk.yellow('start'.padEnd(typeCol));
-          if (st === 'building') return chalk.yellow('build'.padEnd(typeCol));
-          if (st === 'error') {
-            errors.push({ name: service.name, error: persisted.error || 'unknown' });
-            return chalk.red('err'.padEnd(typeCol));
-          }
+        if (isServiceAlive(service.name)) {
+          return chalk.green('up'.padEnd(typeCol));
         }
         return chalk.gray('off'.padEnd(typeCol));
       });
@@ -177,22 +149,12 @@ export const statusCommand = new Command('status')
       }
     }
 
-    // Errors
-    if (errors.length > 0) {
-      console.log(chalk.red('\n  Errors:'));
-      for (const { name, error } of errors) {
-        console.log(chalk.red(`    ${name}: ${error}`));
-      }
-    }
-
     // Legend
     console.log('');
     console.log(
       chalk.gray('  ') +
       chalk.green('up') + chalk.gray('=running  ') +
       chalk.gray('off') + chalk.gray('=stopped  ') +
-      chalk.red('err') + chalk.gray('=error  ') +
-      chalk.yellow('build') + chalk.gray('=building  ') +
       chalk.gray('-') + chalk.gray('=N/A')
     );
     console.log('');

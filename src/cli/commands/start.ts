@@ -2,7 +2,8 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { loadState, saveState } from '../../config/state.js';
 import { scanWorkspace, getServicesForGroup, topologicalSort } from '../../core/workspace.js';
-import { startService, buildService, stopAllServices, getManagedServices } from '../../core/service.js';
+import { startService, startServiceDetached, buildService, stopAllServices, getManagedServices } from '../../core/service.js';
+import { isServiceAlive } from '../../core/pid.js';
 import { getCurrentCommit } from '../../core/git.js';
 import { resolve } from 'node:path';
 
@@ -17,7 +18,7 @@ async function shutdown(reason?: string): Promise<void> {
 
 async function buildAndStartLevel(
   level: { repo: any; service: any }[],
-  opts: { skipBuild: boolean; force: boolean }
+  opts: { skipBuild: boolean; force: boolean; detach: boolean }
 ): Promise<boolean> {
   const state = loadState();
   if (!state.builds) state.builds = {};
@@ -28,7 +29,6 @@ async function buildAndStartLevel(
       const buildKey = `${repo.config.name}/${service.path}`;
 
       if (!opts.skipBuild && service.buildScript) {
-        // Check if rebuild is needed
         const currentCommit = await getCurrentCommit(repo.path).catch(() => '');
         const lastBuild = state.builds[buildKey];
         const needsRebuild = opts.force || !lastBuild || lastBuild.commit !== currentCommit;
@@ -37,7 +37,6 @@ async function buildAndStartLevel(
           console.log(chalk.gray(`  Building ${service.name}...`));
           try {
             await buildService(servicePath, service.buildScript);
-            // Record successful build
             state.builds[buildKey] = {
               commit: currentCommit,
               builtAt: new Date().toISOString(),
@@ -57,12 +56,30 @@ async function buildAndStartLevel(
         return true;
       }
 
+      // Skip already-running services
+      if (isServiceAlive(service.name)) {
+        console.log(chalk.yellow(`  ${service.name}: already running (skipping)`));
+        return true;
+      }
+
+      if (opts.detach) {
+        console.log(chalk.gray(`  Starting ${service.name}...`));
+        const pid = startServiceDetached(repo.path, service, repo.config.name);
+        if (pid) {
+          console.log(chalk.green(`  ${service.name}: started (pid ${pid})`));
+          return true;
+        } else {
+          console.log(chalk.red(`  ${service.name}: failed to start`));
+          return false;
+        }
+      }
+
       console.log(chalk.gray(`  Starting ${service.name}...`));
       const result = await startService(repo.path, service, repo.config.name, (status, error) => {
         if (status === 'running') {
           console.log(chalk.green(`  ${service.name}: running`));
         } else if (status === 'error') {
-          console.log(chalk.red(`  ${service.name}: ${error}`));
+          console.log(chalk.yellow(`  Warning: ${service.name} exited — ${error}`));
         }
       });
 
@@ -78,6 +95,7 @@ export const startCommand = new Command('start')
   .description('Start services. Specify repos/track or omit to start all.')
   .argument('[targets...]', 'Repo name(s) or track name to start. Omit to start foundation + common + active track.')
   .option('-t, --track <track>', 'Track to start (overrides active track)')
+  .option('-d, --detach', 'Detach: spawn services in background and exit')
   .option('--skip-build', 'Skip build step')
   .option('-f, --force', 'Force rebuild even if already built')
   .action(async (targets: string[], opts) => {
@@ -87,21 +105,21 @@ export const startCommand = new Command('start')
       return;
     }
 
-    process.once('SIGINT', async () => {
-      await shutdown();
-      process.exit(0);
-    });
-    process.once('SIGTERM', async () => {
-      await shutdown();
-      process.exit(0);
-    });
+    if (!opts.detach) {
+      process.once('SIGINT', async () => {
+        await shutdown();
+        process.exit(0);
+      });
+      process.once('SIGTERM', async () => {
+        await shutdown();
+        process.exit(0);
+      });
+    }
 
     const repos = await scanWorkspace(state.workspacePath);
 
     if (targets.length > 0) {
-      // Selective start: specific repos or track name
       for (const target of targets) {
-        // Check if it's a track name
         const trackRepo = repos.find((r) => r.config.track === target && r.exists);
         if (trackRepo) {
           console.log(chalk.bold(`\nStarting track: ${target}...\n`));
@@ -111,14 +129,13 @@ export const startCommand = new Command('start')
             const ok = await buildAndStartLevel(level, opts);
             if (!ok) {
               console.log(chalk.red(`\nAborted: ${target} build failed.`));
-              await shutdown('Stopping services started before the failure...');
+              if (!opts.detach) await shutdown('Stopping services started before the failure...');
               return;
             }
           }
           continue;
         }
 
-        // Check if it's a repo name
         const repo = repos.find((r) => r.config.name === target && r.exists);
         if (repo) {
           console.log(chalk.bold(`\nStarting ${target}...\n`));
@@ -128,7 +145,7 @@ export const startCommand = new Command('start')
             const ok = await buildAndStartLevel(level, opts);
             if (!ok) {
               console.log(chalk.red(`\nAborted: ${target} build failed.`));
-              await shutdown('Stopping services started before the failure...');
+              if (!opts.detach) await shutdown('Stopping services started before the failure...');
               return;
             }
           }
@@ -139,10 +156,8 @@ export const startCommand = new Command('start')
         console.log(chalk.gray(`Available repos: ${repos.map((r) => r.config.name).join(', ')}`));
       }
     } else {
-      // Full start: foundation + common + active track
       const track = opts.track || state.activeTrack;
 
-      // Build foundation first
       const foundationServices = getServicesForGroup(repos, 'foundation');
       if (foundationServices.length > 0) {
         console.log(chalk.bold('\nBuilding foundation libraries...\n'));
@@ -151,13 +166,12 @@ export const startCommand = new Command('start')
           const ok = await buildAndStartLevel(level, opts);
           if (!ok) {
             console.log(chalk.red('\nAborted: foundation build failed.'));
-            await shutdown('Stopping services started before the failure...');
+            if (!opts.detach) await shutdown('Stopping services started before the failure...');
             return;
           }
         }
       }
 
-      // Start common services
       console.log(chalk.bold('\nStarting common services...\n'));
       const commonServices = getServicesForGroup(repos, 'common');
       const commonLevels = topologicalSort(commonServices);
@@ -165,12 +179,11 @@ export const startCommand = new Command('start')
         const ok = await buildAndStartLevel(level, opts);
         if (!ok) {
           console.log(chalk.red('\nAborted: common service build failed.'));
-          await shutdown('Stopping services started before the failure...');
+          if (!opts.detach) await shutdown('Stopping services started before the failure...');
           return;
         }
       }
 
-      // Start track services
       if (track) {
         console.log(chalk.bold(`\nStarting ${track} track services...\n`));
         const trackServices = getServicesForGroup(repos, 'track', track);
@@ -179,7 +192,7 @@ export const startCommand = new Command('start')
           const ok = await buildAndStartLevel(level, opts);
           if (!ok) {
             console.log(chalk.red('\nAborted: track service build failed.'));
-            await shutdown('Stopping services started before the failure...');
+            if (!opts.detach) await shutdown('Stopping services started before the failure...');
             return;
           }
         }
@@ -188,9 +201,15 @@ export const startCommand = new Command('start')
       }
     }
 
+    if (opts.detach) {
+      console.log(chalk.green('\nDone. Services started in background.'));
+      console.log(chalk.gray('Use `herdy status` to check, `herdy stop --all` to stop all.'));
+      return;
+    }
+
     console.log(chalk.green('\nDone. Services running. Press Ctrl+C to stop all.'));
     console.log(chalk.gray('Use `herdy status` in another terminal to check services.'));
 
-    // Keep process alive — services die when herdy exits
+    // Keep process alive — foreground services die when herdy exits
     await new Promise(() => {});
   });

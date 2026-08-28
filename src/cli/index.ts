@@ -16,17 +16,6 @@ import { logsCommand } from './commands/logs.js';
 import { installCommand } from './commands/install.js';
 import { restartCommand } from './commands/restart.js';
 import { configCommand } from './commands/config.js';
-import { stopAllServices } from '../core/service.js';
-
-async function gracefulShutdown() {
-  console.log('\nShutting down services...');
-  await stopAllServices();
-  process.exit(0);
-}
-
-process.on('SIGINT', gracefulShutdown);
-process.on('SIGTERM', gracefulShutdown);
-
 const ERROR_LOG = resolve(homedir(), '.herdy', 'error.log');
 
 function logError(err: unknown): void {
