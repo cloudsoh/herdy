@@ -1,8 +1,19 @@
 import { execaCommand, execa } from 'execa';
 import type { GitStatus } from '../types.js';
 
+// Strip git hook env vars so nested git operations (e.g. tests run inside a
+// pre-commit hook) use the cwd-based repo, not the outer hook's GIT_DIR.
+const cleanGitEnv = ((): NodeJS.ProcessEnv => {
+  const env = { ...process.env };
+  delete env.GIT_DIR;
+  delete env.GIT_INDEX_FILE;
+  delete env.GIT_OBJECT_DIRECTORY;
+  delete env.GIT_WORK_TREE;
+  return env;
+})();
+
 async function git(args: string, cwd: string): Promise<string> {
-  const result = await execaCommand(`git ${args}`, { cwd, reject: false });
+  const result = await execaCommand(`git ${args}`, { cwd, env: cleanGitEnv, reject: false });
   if (result.exitCode !== 0) {
     const msg = result.stderr || result.stdout || `exit code ${result.exitCode}`;
     throw new Error(`git ${args} failed: ${msg}`);
@@ -46,7 +57,7 @@ export async function pull(cwd: string): Promise<void> {
   await git('pull', cwd);
 }
 
-export async function getStatus(cwd: string, remoteBranch: string, remote = 'origin'): Promise<GitStatus> {
+export async function getStatus(cwd: string, remote = 'origin'): Promise<GitStatus> {
   let fetchFailed = false;
   try {
     await fetch(cwd, remote);
@@ -55,8 +66,10 @@ export async function getStatus(cwd: string, remoteBranch: string, remote = 'ori
   }
 
   const branch = await getCurrentBranch(cwd);
-  const behindOutput = await git(`rev-list --count HEAD..${remote}/${remoteBranch}`, cwd).catch(() => '0');
-  const aheadOutput = await git(`rev-list --count ${remote}/${remoteBranch}..HEAD`, cwd).catch(() => '0');
+  // Compare against the current branch's own remote tracking branch so repos on feature
+  // branches don't falsely appear behind the base branch.
+  const behindOutput = await git(`rev-list --count HEAD..${remote}/${branch}`, cwd).catch(() => '0');
+  const aheadOutput = await git(`rev-list --count ${remote}/${branch}..HEAD`, cwd).catch(() => '0');
   const dirtyOutput = await git('status --porcelain', cwd);
 
   return {
@@ -71,7 +84,7 @@ export async function getStatus(cwd: string, remoteBranch: string, remote = 'ori
 export async function stash(cwd: string, message?: string): Promise<boolean> {
   const msg = message || 'herdy-auto-stash';
   const before = await git('stash list', cwd);
-  await execa('git', ['stash', 'push', '--include-untracked', '-m', msg], { cwd, reject: false });
+  await execa('git', ['stash', 'push', '--include-untracked', '-m', msg], { cwd, env: cleanGitEnv, reject: false });
   const after = await git('stash list', cwd);
   return before !== after;
 }
@@ -82,13 +95,13 @@ export async function hasStash(cwd: string): Promise<boolean> {
 }
 
 export async function discardLockFiles(cwd: string): Promise<void> {
-  const result = await execaCommand('git status --porcelain', { cwd, reject: false });
+  const result = await execaCommand('git status --porcelain', { cwd, env: cleanGitEnv, reject: false });
   const lockFiles = result.stdout
     .split('\n')
     .filter((line) => line.length > 0 && line.trimEnd().endsWith('package-lock.json'))
     .map((line) => line.slice(3).trim());
   for (const file of lockFiles) {
-    await execaCommand(`git restore --staged --worktree -- ${file}`, { cwd, reject: false });
+    await execaCommand(`git restore --staged --worktree -- ${file}`, { cwd, env: cleanGitEnv, reject: false });
   }
 }
 

@@ -15,6 +15,7 @@ describe('git operations', () => {
     execSync('git config user.email "test@test.com"', { cwd: TEST_REPO, stdio: 'pipe' });
     execSync('git config user.name "Test"', { cwd: TEST_REPO, stdio: 'pipe' });
     execSync('git config commit.gpgsign false', { cwd: TEST_REPO, stdio: 'pipe' });
+    execSync('git config core.hooksPath /dev/null', { cwd: TEST_REPO, stdio: 'pipe' });
     writeFileSync(resolve(TEST_REPO, 'file.txt'), 'hello');
     execSync('git add . && git commit -m "initial"', { cwd: TEST_REPO, stdio: 'pipe' });
   });

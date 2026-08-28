@@ -39,7 +39,7 @@ export async function scanWorkspace(workspacePath: string): Promise<RepoInfo[]> 
     let gitStatus: GitStatus | undefined;
     if (exists) {
       try {
-        gitStatus = await git.getStatus(repoPath, config.baseBranch, repoConfig.remote ?? config.remote ?? 'origin');
+        gitStatus = await git.getStatus(repoPath, repoConfig.remote ?? config.remote ?? 'origin');
       } catch {
         // ignore git errors for repos on different branches
       }
