@@ -48,14 +48,14 @@ function saveGlobalState(global: GlobalState): void {
 }
 
 export function resolveWorkspacePath(): string {
-  // 1. If cwd has herdy.yaml, use cwd
-  const cwdConfig = resolve(process.cwd(), 'herdy.yaml');
-  if (existsSync(cwdConfig)) {
+  const global = loadGlobalState();
+
+  // Use cwd only if it has been explicitly linked (present in state)
+  if (global.workspaces[process.cwd()]) {
     return process.cwd();
   }
 
-  // 2. Fall back to lastUsed
-  const global = loadGlobalState();
+  // Fall back to the last used linked workspace
   return global.lastUsed || '';
 }
 
