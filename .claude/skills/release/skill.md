@@ -66,8 +66,16 @@ Stage `CHANGELOG.md` and `package.json` only. Commit:
 chore: bump version to X.Y.Z
 ```
 
-No other files. Do not create a git tag — that is left to the publish step.
+No other files.
 
-### 7. Report
+### 7. Tag
 
-Print the new version, the bump type, and the number of commits included.
+Create an annotated git tag on the version bump commit:
+
+```bash
+git tag -a vX.Y.Z -m "vX.Y.Z"
+```
+
+### 8. Report
+
+Print the new version, the bump type, the number of commits included, and the tag name.
