@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-08-31
+
+### Added
+- PID file management at `~/.herdy/pids/<service>.pid` for cross-process service control — `herdy stop` can now kill services that were started in a separate terminal session
+- `herdy start --detach` / `-d` flag: spawn services in the background and exit immediately; foreground mode (default) logs a warning when a child process is killed externally but keeps remaining services running
+- `herdy stop` now accepts a service name, repo name, track name, or `--all`; resolves by track → repo → service; prints usage when called with no argument
+- `herdy status` derives running/stopped state from PID files (`kill -0`) rather than persisted state, making it accurate across processes
+
+### Changed
+- `herdy switch <track>` is now config-only: updates the active track and prints a hint to run `herdy start`; no longer stops or starts any services
+- `herdy install` runs `npm install` at the repo root first for repos that declare npm workspaces, ensuring cross-package symlinks are created before individual package installs
+
+### Fixed
+- Unhandled exceptions and rejected promises now write the full stack trace to `~/.herdy/error.log` and surface a concise message to the terminal instead of a raw dump
+- Workspace resolution now checks the state registry rather than looking for a config file in the current directory, preventing an unrelated workspace from being activated when herdy is run from outside a linked workspace
+
 ## [0.5.4] - 2026-08-28
 
 ### Fixed
