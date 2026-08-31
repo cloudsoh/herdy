@@ -1,9 +1,21 @@
 import { Command } from 'commander';
 import { resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
 import chalk from 'chalk';
 import { loadState } from '../../config/state.js';
 import { scanWorkspace } from '../../core/workspace.js';
 import { installService, buildService } from '../../core/service.js';
+
+function hasNpmWorkspaces(repoPath: string): boolean {
+  const pkgPath = resolve(repoPath, 'package.json');
+  if (!existsSync(pkgPath)) return false;
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return Array.isArray(pkg.workspaces) && pkg.workspaces.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 export const installCommand = new Command('install')
   .description('Install and build a specific repo or all repos')
@@ -29,6 +41,19 @@ export const installCommand = new Command('install')
 
     for (const target of targets) {
       console.log(chalk.cyan(`\n${target.config.name}:`));
+
+      // For npm workspaces repos, install at the repo root first so cross-package
+      // symlinks are created before building individual packages
+      if (hasNpmWorkspaces(target.path)) {
+        try {
+          process.stdout.write(chalk.gray(`  Installing workspace root... `));
+          await installService(target.path);
+          console.log(chalk.green('done'));
+        } catch (err: any) {
+          console.log(chalk.red(`failed: ${err.message}`));
+          continue;
+        }
+      }
 
       for (const service of target.services) {
         const servicePath = resolve(target.path, service.path);
