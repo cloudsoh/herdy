@@ -16,6 +16,7 @@ export interface RepoConfig {
   group: RepoGroup;
   track?: string;
   remote?: string;
+  services?: string[];
 }
 
 export interface TrackConfig {

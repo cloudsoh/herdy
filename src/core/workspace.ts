@@ -14,6 +14,42 @@ export interface RepoInfo {
   services: ServiceConfig[];
 }
 
+function applyServiceFilter(
+  repoConfig: RepoConfig,
+  services: ServiceConfig[],
+  repoName: string
+): ServiceConfig[] {
+  const filter = repoConfig.services;
+  if (!filter || filter.length === 0) return services;
+
+  const availablePaths = new Set(services.map((s) => s.path));
+  const unknown = filter.filter((p) => !availablePaths.has(p));
+  if (unknown.length > 0) {
+    throw new Error(
+      `herdy.yaml lists unknown service path(s) for repo "${repoName}": ${unknown.join(', ')}\n` +
+        `Available: ${services.map((s) => s.path).join(', ')}`
+    );
+  }
+
+  const included = services.filter((s) => filter.includes(s.path));
+  const includedNames = new Set(included.map((s) => s.name));
+  const allServiceNames = new Set(services.map((s) => s.name));
+
+  for (const service of included) {
+    for (const dep of service.dependsOn) {
+      if (allServiceNames.has(dep) && !includedNames.has(dep)) {
+        const depService = services.find((s) => s.name === dep)!;
+        throw new Error(
+          `"${service.name}" depends on "${dep}", but "${dep}" is excluded by the services filter in herdy.yaml.\n` +
+            `Add "${depService.path}" to the services list for repo "${repoName}", or remove the dependency.`
+        );
+      }
+    }
+  }
+
+  return included;
+}
+
 export function scanWorkspaceLocal(workspacePath: string): RepoInfo[] {
   const config = loadWorkspaceConfig();
   const repos: RepoInfo[] = [];
@@ -21,7 +57,8 @@ export function scanWorkspaceLocal(workspacePath: string): RepoInfo[] {
   for (const repoConfig of config.repos) {
     const repoPath = resolve(workspacePath, repoConfig.name);
     const exists = existsSync(repoPath) && existsSync(resolve(repoPath, '.git'));
-    const services = exists ? discoverServices(repoPath, repoConfig.name) : [];
+    const raw = exists ? discoverServices(repoPath, repoConfig.name) : [];
+    const services = exists ? applyServiceFilter(repoConfig, raw, repoConfig.name) : [];
     repos.push({ config: repoConfig, path: repoPath, exists, services });
   }
 
@@ -45,7 +82,8 @@ export async function scanWorkspace(workspacePath: string): Promise<RepoInfo[]> 
       }
     }
 
-    const services = exists ? discoverServices(repoPath, repoConfig.name) : [];
+    const raw = exists ? discoverServices(repoPath, repoConfig.name) : [];
+    const services = exists ? applyServiceFilter(repoConfig, raw, repoConfig.name) : [];
 
     repos.push({ config: repoConfig, path: repoPath, exists, gitStatus, services });
   }
