@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-09-01
+
+### Added
+- Per-repo service filter in the config file: specify which services to include or exclude for a given repo without changing the global track definition
+
+### Fixed
+- Startup hint now correctly references `herdy start` instead of the removed `herdy dev` command
+
 ## [0.6.0] - 2026-08-31
 
 ### Added
