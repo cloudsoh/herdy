@@ -33,5 +33,5 @@ export const linkCommand = new Command('link')
       }
     }
 
-    console.log(chalk.gray('\nWorkspace linked. Run `herdy dev` to launch the dashboard.'));
+    console.log(chalk.gray('\nWorkspace linked. Run `herdy start` to start services.'));
   });

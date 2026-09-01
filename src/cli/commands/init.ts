@@ -64,7 +64,7 @@ export const initCommand = new Command('init')
     });
 
     console.log(chalk.green('\nInit complete!'));
-    console.log(chalk.gray('Run `herdy dev` to launch the dashboard.'));
+    console.log(chalk.gray('Run `herdy start` to start services.'));
   });
 
 function promptConfirm(message: string): Promise<boolean> {
