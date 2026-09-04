@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-09-04
+
+### Added
+- `herdy install --no-audit` flag to skip npm audit during install
+- `herdy install --verbose` / `-v` flag to stream live npm install output instead of showing a spinner line
+
 ## [0.7.0] - 2026-09-01
 
 ### Added
