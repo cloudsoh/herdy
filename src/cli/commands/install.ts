@@ -21,6 +21,8 @@ export const installCommand = new Command('install')
   .description('Install and build a specific repo or all repos')
   .argument('[repo]', 'Repo name to install (installs all if omitted)')
   .option('--no-build', 'Skip build after install')
+  .option('--no-audit', 'Skip npm audit after install')
+  .option('-v, --verbose', 'Stream npm install output')
   .action(async (repo, opts) => {
     const state = loadState();
     if (!state.workspacePath) {
@@ -46,11 +48,13 @@ export const installCommand = new Command('install')
       // symlinks are created before building individual packages
       if (hasNpmWorkspaces(target.path)) {
         try {
-          process.stdout.write(chalk.gray(`  Installing workspace root... `));
-          await installService(target.path);
-          console.log(chalk.green('done'));
+          if (!opts.verbose) process.stdout.write(chalk.gray(`  Installing workspace root... `));
+          else console.log(chalk.gray(`  Installing workspace root...`));
+          await installService(target.path, opts.verbose, opts.audit);
+          if (!opts.verbose) console.log(chalk.green('done'));
         } catch (err: any) {
-          console.log(chalk.red(`failed: ${err.message}`));
+          if (!opts.verbose) process.stdout.write('\n');
+          console.log(chalk.red(`  failed: ${err.message}`));
           continue;
         }
       }
@@ -59,11 +63,13 @@ export const installCommand = new Command('install')
         const servicePath = resolve(target.path, service.path);
 
         try {
-          process.stdout.write(chalk.gray(`  Installing ${service.name}... `));
-          await installService(servicePath);
-          console.log(chalk.green('done'));
+          if (!opts.verbose) process.stdout.write(chalk.gray(`  Installing ${service.name}... `));
+          else console.log(chalk.gray(`  Installing ${service.name}...`));
+          await installService(servicePath, opts.verbose, opts.audit);
+          if (!opts.verbose) console.log(chalk.green('done'));
         } catch (err: any) {
-          console.log(chalk.red(`failed: ${err.message}`));
+          if (!opts.verbose) process.stdout.write('\n');
+          console.log(chalk.red(`  failed: ${err.message}`));
           continue;
         }
 

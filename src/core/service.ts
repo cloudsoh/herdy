@@ -54,8 +54,13 @@ export function getServiceLogs(serviceName: string, lines = 100): string[] {
   return allLines.slice(-lines);
 }
 
-export async function installService(servicePath: string): Promise<void> {
-  await execa('npm', ['install'], { cwd: servicePath });
+export async function installService(servicePath: string, verbose = false, audit = true): Promise<void> {
+  const args = ['install'];
+  if (!audit) args.push('--no-audit');
+  await execa('npm', args, {
+    cwd: servicePath,
+    stdio: verbose ? 'inherit' : 'pipe',
+  });
 }
 
 export async function buildService(servicePath: string, buildScript = 'build'): Promise<string> {
